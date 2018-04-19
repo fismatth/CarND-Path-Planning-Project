@@ -1,0 +1,92 @@
+#ifndef PATH_PLANNER_H
+#define PATH_PLANNER_H
+
+#include <vector>
+#include <functional>
+#include <string>
+#include <iostream>
+#include "spline.h"
+#include "helpers.h"
+
+
+using namespace std;
+
+struct Trajectory
+{
+	vector<double> x_values;
+	vector<double> y_values;
+};
+
+struct TrajectoryInformation
+{
+	vector<double> x_values;
+	vector<double> y_values;
+	vector<double> s_values;
+	vector<double> d_values;
+	vector<double> v;
+	vector<double> a;
+	vector<double> jerk;
+};
+
+struct MapData
+{
+	vector<double> map_waypoints_x;
+	vector<double> map_waypoints_y;
+	vector<double> map_waypoints_s;
+	vector<double> map_waypoints_dx;
+	vector<double> map_waypoints_dy;
+};
+
+struct Car
+{
+	double x;
+	double y;
+	double s;
+	double d;
+	double yaw;
+	double speed;
+	// we don't get this from the simulator -> use default values
+//	double a = 0.0;
+//	double delta = 0.0;
+};
+
+ostream& operator<<(ostream& os, const Car& car);
+
+class PathPlanner
+{
+public:
+
+	typedef function<
+			double(const TrajectoryInformation&, const Car&, const vector<Vehicle>&)> CostFunctionType;
+
+	PathPlanner(const MapData& waypoints);
+
+	Trajectory plan(const Trajectory& previous, const Car& car,
+			const vector<Vehicle>& other);
+
+	void register_cost_function(CostFunctionType func, double weight);
+
+private:
+
+	double compute_cost(const Trajectory& trajectory, const Car& initial_state, const vector<Vehicle>& others, bool verbose = false);
+
+	void generate_trajectories(Trajectory current, Car car_state, Trajectory& best, double& best_value, const Car& initial_state, const vector<Vehicle>& others);
+
+	MapData _map_data;
+	Trajectory _current_trajectory;
+	vector<CostFunctionType> _cost_functions;
+	vector<double> _weights;
+
+
+	size_t _num_copied = 20;
+	double _s_inc = 0.1;
+	double _change_yaw = 0.1;
+	int _num_steps = 15;
+	static constexpr double Lf = 2.67;
+	static const int NUM_SPLINES_PER_SIDE = 20;
+	// factor of 2 due to lane change splines + small correction splines
+	static const int NUM_SPLINES = 2 * ( 2 * NUM_SPLINES_PER_SIDE + 1);
+	tk::spline _basic_splines[NUM_SPLINES];
+};
+
+#endif // PATH_PLANER_H
