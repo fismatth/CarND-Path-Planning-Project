@@ -6,6 +6,7 @@
 #include <math.h>
 #include <vector>
 #include <iostream>
+#include "Eigen-3.3/Eigen/Core"
 
 using namespace std;
 
@@ -64,7 +65,25 @@ vector<Vehicle> vehicles_from_sensor_fusion(
 
 void differentiate(double dt, const vector<double>& x, vector<double>& dx);
 
+double yaw(const Eigen::Vector2d& v1, const Eigen::Vector2d& v2);
+
 double yaw_diff(double x0, double y0, double x1, double y1, double x2, double y2);
+
+double eval_polynomial(const Eigen::VectorXd& coeffs, double x);
+
+Eigen::VectorXd JMT(vector< double> start, vector <double> end, double T);
+
+Eigen::VectorXd JMT_ConstantAcceleration(vector< double> start, vector <double> end, double T);
+
+Eigen::VectorXd JMT_KeepVelocity(vector< double> start, vector <double> end, double T);
+
+Eigen::VectorXd JMT_PosVelConditions(vector<double> start, vector<double> end, double T);
+
+Eigen::VectorXd JMT_Approximation(vector<double> start, vector<double> end, double T);
+
+pair<double, double> compute_global_coords(double yaw, double x_offset, double y_offset, double x_local, double y_local);
+
+pair<double, double> compute_local_coords(double yaw, double x_offset, double y_offset, double x_global, double y_global);
 
 template<typename T>
 ostream& operator<<(ostream& os, const std::vector<T>& v)

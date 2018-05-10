@@ -34,6 +34,16 @@ double speed_cf(const TrajectoryInformation& traj, const Car& car, const vector<
 	return avg_v > 1e-4 ? logistic(fabs(TARGET_SPEED - avg_v) / TARGET_SPEED) : 1.0;
 }
 
+double efficiency_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
+{
+	double s_dist = traj.s_values.back() - traj.s_values.front();
+	if (s_dist < 0.0)
+	{
+		s_dist += max_s;
+	}
+
+	return 1.0 / s_dist;
+}
 
 double exceeds_max_speed(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
 {
@@ -83,9 +93,9 @@ double max_jerk_cf(const TrajectoryInformation& traj, const Car& car, const vect
 {
 	double max_exceeded = 0.0;
 
-	for (auto a_i: traj.jerk)
+	for (auto j_i: traj.jerk)
 	{
-		if (a_i > 0.95 * MAX_JERK)
+		if (j_i > 0.95 * MAX_JERK)
 		{
 			max_exceeded += 1.0;
 		}
@@ -112,7 +122,7 @@ double off_road_cf(const TrajectoryInformation& traj, const Car& car, const vect
 {
 	for (auto d_i : traj.d_values)
 	{
-		if (d_i < 0.0 || d_i > NUM_LANES * LANE_WIDTH)
+		if (d_i - 0.5 * LANE_WIDTH < 0.0 || d_i + 0.5 * LANE_WIDTH > NUM_LANES * LANE_WIDTH)
 		{
 			return 1.0;
 		}
@@ -123,12 +133,14 @@ double off_road_cf(const TrajectoryInformation& traj, const Car& car, const vect
 
 double collision_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
 {
-//	double num_collisions = 0.0;
+	double num_collisions = 0.0;
 
 	for (auto veh : other)
 	{
-		// under-estimate of speed in s direction of other vehicle
-		double veh_v_s = 0.9 * sqrt(pow(veh.vx, 2) + pow(veh.vy, 2));
+		// under-estimate of speed in s direction used for vehicles in front
+		double veh_v_s_low = 0.9 * sqrt(pow(veh.vx, 2) + pow(veh.vy, 2));
+		// over-estimate of speed in s direction used for vehicles from behind
+		double veh_v_s_high = 1.1 * sqrt(pow(veh.vx, 2) + pow(veh.vy, 2));
 
 		for (int i = 0; i < traj.d_values.size(); ++i)
 		{
@@ -141,53 +153,58 @@ double collision_cf(const TrajectoryInformation& traj, const Car& car, const vec
 			if (left_lane == veh_lane_left || right_lane == veh_lane_left || right_lane == veh_lane_right || left_lane == veh_lane_right)
 			{
 				//
-				double s_dist = fabs((veh.s + veh_v_s * dt * i) - traj.s_values[i]);
+				double s_car_i = traj.s_values[i];
+				double s_dist_low = fabs((veh.s + veh_v_s_low * dt * i) - s_car_i);
+				double s_dist_high = fabs((veh.s + veh_v_s_high * dt * i) - s_car_i);
 
-				if (s_dist <= 2.0 * VEHICLE_RADIUS)
+				if (s_dist_low <= 2.0 * VEHICLE_RADIUS || s_dist_high <= 2.0 * VEHICLE_RADIUS || (veh.s + veh_v_s_low * dt * i < s_car_i && s_car_i < veh.s + veh_v_s_high * dt * i))
 				{
-					return 1.0;
-					//num_collisions += 1.0;
+					num_collisions += 1.0;
 				}
 			}
 
-//			double veh_x = veh.x + i * dt * veh.vx;
-//			double veh_y = veh.y + i * dt * veh.vy;
-//
-//			double dist = distance(veh_x, veh_y, traj.x_values[i], traj.y_values[i]);
-//
-//			if (dist <= 2.0 * VEHICLE_RADIUS)
-//			{
-//				num_collisions += 1.0;
-//			}
 		}
 
 	}
 
-	return 0.0;
-//	return num_collisions;
+	return num_collisions;
+//	return 0.0;
 }
 
 double other_veh_gap_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
 {
-	double buffer_cost = 0.0;
+	double num_low_buffer = 0.0;
 
 	for (auto veh : other)
 	{
-		for (int i = 0; i < traj.x_values.size(); ++i)
+		// under-estimate of speed in s direction used for vehicles in front
+		double veh_v_s_low = 0.9 * sqrt(pow(veh.vx, 2) + pow(veh.vy, 2));
+		// over-estimate of speed in s direction used for vehicles from behind
+		double veh_v_s_high = 1.1 * sqrt(pow(veh.vx, 2) + pow(veh.vy, 2));
+
+		for (int i = 0; i < traj.d_values.size(); ++i)
 		{
-			double veh_x = veh.x;// + i * dt * veh.vx;
-			double veh_y = veh.y;// + i * dt * veh.vy;
+			// normally, we should have left_lane == right_lane, but when changing lanes (or accidentally driving over lane boundaries), car could be on two lanes
+			int left_lane = (traj.d_values[i] - 0.25 * LANE_WIDTH) / LANE_WIDTH;
+			int right_lane = (traj.d_values[i] + 0.25 * LANE_WIDTH) / LANE_WIDTH;
+			int veh_lane_left = (veh.d - 0.25 * LANE_WIDTH) / LANE_WIDTH;
+			int veh_lane_right = (veh.d + 0.25 * LANE_WIDTH) / LANE_WIDTH;
 
-			double buffer = distance(veh_x, veh_y, traj.x_values[i], traj.y_values[i]);
-
-			if (buffer < 3.0 * VEHICLE_RADIUS)
+			if (left_lane == veh_lane_left || right_lane == veh_lane_left || right_lane == veh_lane_right || left_lane == veh_lane_right)
 			{
-				buffer_cost += 3.0 * VEHICLE_RADIUS - buffer;
+				double s_car_i = traj.s_values[i];
+				double s_dist_low = fabs((veh.s + veh_v_s_low * dt * i) - s_car_i);
+				double s_dist_high = fabs((veh.s + veh_v_s_high * dt * i) - s_car_i);
+
+				if (s_dist_low <= 10.0 * VEHICLE_RADIUS || s_dist_high <= 10.0 * VEHICLE_RADIUS || (veh.s + veh_v_s_low * dt * i < s_car_i && s_car_i < veh.s + veh_v_s_high * dt * i))
+				{
+					num_low_buffer += 1.0;
+				}
 			}
 		}
 	}
 
-	return logistic(buffer_cost);
+	return num_low_buffer;
 }
 
 double max_dist_from_center_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
@@ -212,15 +229,16 @@ double max_dist_from_center_cf(const TrajectoryInformation& traj, const Car& car
 double keep_lane_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
 {
 	double total_diff_from_center = 0.0;
-
+	int start_lane = car.d / LANE_WIDTH;
+	double start_center = start_lane * LANE_WIDTH + 0.5 * LANE_WIDTH;
+	int end_lane = traj.d_values.back() / LANE_WIDTH;
+	double end_center = end_lane * LANE_WIDTH + 0.5 * LANE_WIDTH;
 //	cout << "d_values = " << endl;
 //	cout << traj.d_values;
 
 	for (auto d_i : traj.d_values)
 	{
-		int lane = d_i / LANE_WIDTH;
-		double center = lane * LANE_WIDTH + 0.5 * LANE_WIDTH;
-		total_diff_from_center += fabs(d_i - center);
+		total_diff_from_center += min(fabs(d_i - start_center), fabs(d_i - end_center));
 //		cout << " += " << d_i << " - " << center << " == " << d_i - center << " -> " << total_diff_from_center << endl;
 	}
 
@@ -278,7 +296,7 @@ double min_lane_changes_cf(const TrajectoryInformation& traj, const Car& car, co
 	switch (lane_changes) {
 		case 1:
 			// one lane change is ok
-			return 0.1;
+			return 0.2;
 			break;
 		case 2:
 			// two lane changes at a time only if really needed
@@ -307,3 +325,36 @@ double min_total_yaw_cf(const TrajectoryInformation& traj, const Car& car, const
 
 	return logistic(yaw_total);
 }
+
+double good_goal_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
+{
+	int last_idx = traj.d_values.size() - 1;
+	double d_last = traj.d_values[last_idx];
+	double d_pre_last = traj.d_values[last_idx - 1];
+	int lane = d_last / LANE_WIDTH;
+	double diff_from_center = fabs((lane + 0.5) * LANE_WIDTH - d_last);
+
+	if (diff_from_center > 0.1 * LANE_WIDTH)
+	{
+		return 1.0;
+	}
+
+	// TODO what is a good threshold?
+//	if (fabs(d_last - d_pre_last) > 0.02)
+//	{
+//		return 1.0;
+//	}
+
+	return 0.0;
+}
+
+double min_d_range_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
+{
+	double max_d = *std::max_element(traj.d_values.begin(), traj.d_values.end());
+	double min_d = *std::min_element(traj.d_values.begin(), traj.d_values.end());
+	double max_s = *std::max_element(traj.s_values.begin(), traj.s_values.end());
+	double min_s = *std::min_element(traj.s_values.begin(), traj.s_values.end());
+
+	return (max_d - min_d) / (max_s - min_s);
+}
+

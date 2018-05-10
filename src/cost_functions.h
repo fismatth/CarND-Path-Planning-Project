@@ -11,6 +11,8 @@ double standing_cf(const TrajectoryInformation& traj, const Car& car, const vect
 
 double speed_cf(const TrajectoryInformation&, const Car&, const vector<Vehicle>&);
 
+double efficiency_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
+
 double exceeds_max_speed(const TrajectoryInformation&, const Car&, const vector<Vehicle>&);
 
 double max_acceleration_cf(const TrajectoryInformation&, const Car&, const vector<Vehicle>&);
@@ -38,5 +40,9 @@ double min_d_cf(const TrajectoryInformation& traj, const Car& car, const vector<
 double min_lane_changes_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
 
 double min_total_yaw_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
+
+double good_goal_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
+
+double min_d_range_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
 
 #endif

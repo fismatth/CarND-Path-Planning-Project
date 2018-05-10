@@ -46,8 +46,12 @@ struct Car
 	double yaw;
 	double speed;
 	// we don't get this from the simulator -> use default values
-//	double a = 0.0;
-//	double delta = 0.0;
+	double a = 0.0;
+	double yaw_dot = 0.0;
+	double x_local_dot = 0.0;
+	double x_local_dot_dot = 0.0;
+	double y_local_dot = 0.0;
+	double y_local_dot_dot = 0.0;
 };
 
 ostream& operator<<(ostream& os, const Car& car);
@@ -70,6 +74,8 @@ private:
 
 	double compute_cost(const Trajectory& trajectory, const Car& initial_state, const vector<Vehicle>& others, bool verbose = false);
 
+	pair<Eigen::VectorXd, Eigen::VectorXd> compute_jmt(Car& car_state, double d_goal, double acceleration);
+
 	void generate_trajectories(Trajectory current, Car car_state, Trajectory& best, double& best_value, const Car& initial_state, const vector<Vehicle>& others);
 
 	MapData _map_data;
@@ -77,12 +83,9 @@ private:
 	vector<CostFunctionType> _cost_functions;
 	vector<double> _weights;
 
+	double T = 1.5;
+	size_t _num_copied = 30;
 
-	size_t _num_copied = 20;
-	double _s_inc = 0.1;
-	double _change_yaw = 0.1;
-	int _num_steps = 15;
-	static constexpr double Lf = 2.67;
 	static const int NUM_SPLINES_PER_SIDE = 20;
 	// factor of 2 due to lane change splines + small correction splines
 	static const int NUM_SPLINES = 2 * ( 2 * NUM_SPLINES_PER_SIDE + 1);
