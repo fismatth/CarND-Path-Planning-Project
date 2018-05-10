@@ -81,13 +81,14 @@ int main() {
 
 //	path_planner.register_cost_function(standing_cf, 1.0);
 	path_planner.register_cost_function(exceeds_max_speed, 1.0);
-//	path_planner.register_cost_function(total_acceleration_cf, 1.0);
+	path_planner.register_cost_function(total_acceleration_cf, 0.01);
 //	path_planner.register_cost_function(max_jerk_cf, 1.0);
 //	path_planner.register_cost_function(total_jerk_cf, 1.0);
 	path_planner.register_cost_function(other_veh_gap_cf, 1.0);
 //	path_planner.register_cost_function(right_direction_cf, 1000.0);
 //	path_planner.register_cost_function(min_d_cf, 1.0);
 //	path_planner.register_cost_function(max_dist_from_center_cf, 1.0);
+	path_planner.register_cost_function(min_d_range_cf, 0.1);
 
   h.onMessage([&path_planner](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {

@@ -296,7 +296,7 @@ double min_lane_changes_cf(const TrajectoryInformation& traj, const Car& car, co
 	switch (lane_changes) {
 		case 1:
 			// one lane change is ok
-			return 0.2;
+			return 0.3;
 			break;
 		case 2:
 			// two lane changes at a time only if really needed
