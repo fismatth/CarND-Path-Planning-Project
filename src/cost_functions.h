@@ -29,6 +29,8 @@ double collision_cf(const TrajectoryInformation&, const Car&, const vector<Vehic
 
 double other_veh_gap_cf(const TrajectoryInformation&, const Car&, const vector<Vehicle>&);
 
+double free_trajectory_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
+
 double max_dist_from_center_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
 
 double keep_lane_cf(const TrajectoryInformation&, const Car&, const vector<Vehicle>&);
@@ -44,5 +46,7 @@ double min_total_yaw_cf(const TrajectoryInformation& traj, const Car& car, const
 double good_goal_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
 
 double min_d_range_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
+
+double exceeds_a_y(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
 
 #endif

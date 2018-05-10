@@ -122,7 +122,7 @@ double off_road_cf(const TrajectoryInformation& traj, const Car& car, const vect
 {
 	for (auto d_i : traj.d_values)
 	{
-		if (d_i - 0.5 * LANE_WIDTH < 0.0 || d_i + 0.5 * LANE_WIDTH > NUM_LANES * LANE_WIDTH)
+		if (d_i - 0.25 * LANE_WIDTH < 0.0 || d_i + 0.25 * LANE_WIDTH > NUM_LANES * LANE_WIDTH)
 		{
 			return 1.0;
 		}
@@ -196,9 +196,9 @@ double other_veh_gap_cf(const TrajectoryInformation& traj, const Car& car, const
 				double s_dist_low = fabs((veh.s + veh_v_s_low * dt * i) - s_car_i);
 				double s_dist_high = fabs((veh.s + veh_v_s_high * dt * i) - s_car_i);
 
-				if (s_dist_low <= 10.0 * VEHICLE_RADIUS || s_dist_high <= 10.0 * VEHICLE_RADIUS || (veh.s + veh_v_s_low * dt * i < s_car_i && s_car_i < veh.s + veh_v_s_high * dt * i))
+				if (s_dist_low <= 10.0 * VEHICLE_RADIUS || s_dist_high <= 10.0 * VEHICLE_RADIUS)
 				{
-					num_low_buffer += 1.0;
+					num_low_buffer += 10.0 * VEHICLE_RADIUS - min(s_dist_low, s_dist_high);
 				}
 			}
 		}
@@ -206,6 +206,27 @@ double other_veh_gap_cf(const TrajectoryInformation& traj, const Car& car, const
 
 	return num_low_buffer;
 }
+
+double free_trajectory_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
+{
+	double not_free = 0.0;
+
+	for (auto veh : other)
+	{
+		for (int i = 0; i < traj.x_values.size(); ++i)
+		{
+			double dist = distance(traj.x_values[i], traj.y_values[i], veh.x, veh.y);
+
+			if (dist < LANE_WIDTH)
+			{
+				not_free += 1.0;
+			}
+		}
+	}
+
+	return not_free;
+}
+
 
 double max_dist_from_center_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
 {
@@ -358,3 +379,15 @@ double min_d_range_cf(const TrajectoryInformation& traj, const Car& car, const v
 	return (max_d - min_d) / (max_s - min_s);
 }
 
+double exceeds_a_y(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
+{
+	for (auto a_i : traj.a_y)
+	{
+		if (a_i > 0.99 * MAX_ACCELERATION)
+		{
+			return 1.0;
+		}
+	}
+
+	return 0.0;
+}

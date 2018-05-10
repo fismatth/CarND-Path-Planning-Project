@@ -26,6 +26,13 @@ struct TrajectoryInformation
 	vector<double> v;
 	vector<double> a;
 	vector<double> jerk;
+
+	vector<double> x_local;
+	vector<double> y_local;
+	vector<double> v_x;
+	vector<double> v_y;
+	vector<double> a_x;
+	vector<double> a_y;
 };
 
 struct MapData
@@ -83,8 +90,10 @@ private:
 	vector<CostFunctionType> _cost_functions;
 	vector<double> _weights;
 
+	int _desired_lane = 1;
+
 	double T = 1.5;
-	size_t _num_copied = 30;
+	size_t _num_copied = 20;
 
 	static const int NUM_SPLINES_PER_SIDE = 20;
 	// factor of 2 due to lane change splines + small correction splines

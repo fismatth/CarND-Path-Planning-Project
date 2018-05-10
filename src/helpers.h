@@ -14,8 +14,8 @@ const double dt = 0.02;
 const double max_s = 6945.554;
 
 const double MPH_2_MPERSEC = 0.44704;
-const double MAX_SPEED = 50.0 * MPH_2_MPERSEC;// ?
-const double TARGET_SPEED = 0.95 * MAX_SPEED;
+const double MAX_SPEED = 50.0 * MPH_2_MPERSEC;
+const double TARGET_SPEED = 0.975 * MAX_SPEED;
 const double MAX_ACCELERATION = 10.0;
 const double MAX_JERK = 10.0;
 const double EXPECTED_ACCELERATION = 1.0;

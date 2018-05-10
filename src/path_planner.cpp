@@ -78,11 +78,19 @@ double PathPlanner::compute_cost(const Trajectory& trajectory, const Car& initia
 			double v_i = distance(x_i, y_i, x_i_1, y_i_1) / dt;
 			traj_info.v.push_back(v_i);
 		}
+
+		auto local_xy = compute_local_coords(initial_state.yaw, initial_state.x, initial_state.y, trajectory.x_values[i], trajectory.y_values[i]);
+		traj_info.x_local.push_back(local_xy.first);
+		traj_info.y_local.push_back(local_xy.second);
 	}
 
 	differentiate(dt, traj_info.v, traj_info.a);
 	differentiate(dt, traj_info.a, traj_info.jerk);
 
+	differentiate(dt, traj_info.x_local, traj_info.v_x);
+	differentiate(dt, traj_info.v_x, traj_info.a_x);
+	differentiate(dt, traj_info.y_local, traj_info.v_y);
+	differentiate(dt, traj_info.v_y, traj_info.a_y);
 //	cout << "Actual speed: "<< endl << traj_info.v;
 
 //	if (verbose)
@@ -182,8 +190,8 @@ pair<Eigen::VectorXd, Eigen::VectorXd> PathPlanner::compute_jmt(Car& car_state, 
 void PathPlanner::generate_trajectories(Trajectory current, Car car_state, Trajectory& best, double& best_value, const Car& initial_state, const vector<Vehicle>& others)
 {
 	double y_diff_max = LANE_WIDTH;
-	int num_d_steps = 5;
-	double d_step = 0.05;
+	int num_d_steps = 10;
+	double d_step = 0.025;
 
 	int best_lane = -1;
 	double best_d_goal = -1;
@@ -220,7 +228,7 @@ void PathPlanner::generate_trajectories(Trajectory current, Car car_state, Traje
 				double yaw  = car_state.yaw;
 
 				// limit acceleration depending on change in d direction
-				double acceleration = acc_factor * 1.0;//0.01 * max(0.0, (12.0 - fabs(new_car_state.d - d_goal))) / 12.0;
+				double acceleration = acc_factor * 1.5;//0.01 * max(0.0, (12.0 - fabs(new_car_state.d - d_goal))) / 12.0;
 
 				if (5.0 * fabs(d_goal - car_state.d) > (car_state.speed + 0.5 * acceleration) * T)
 				{
@@ -248,6 +256,11 @@ void PathPlanner::generate_trajectories(Trajectory current, Car car_state, Traje
 
 				double cost = compute_cost(new_trajectory, initial_state, others, false);
 
+				if (lane == _desired_lane)
+				{
+					cost *= 0.5;
+				}
+
 				if (cost < best_value)
 				{
 					best = new_trajectory;
@@ -261,6 +274,8 @@ void PathPlanner::generate_trajectories(Trajectory current, Car car_state, Traje
 			}
 		}
 	}
+
+	_desired_lane = best_lane;
 
 //	cout << "Best lane, d_goal, acc_factor, acceleration: " << best_lane << ", " << best_d_goal << ", " << best_acc_factor << ", " << best_acc << endl;
 }
