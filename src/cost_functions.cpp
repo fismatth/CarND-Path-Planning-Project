@@ -45,7 +45,7 @@ double efficiency_cf(const TrajectoryInformation& traj, const Car& car, const ve
 	return 1.0 / s_dist;
 }
 
-double exceeds_max_speed(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
+double exceeds_max_speed_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
 {
 	for (auto v_i : traj.v)
 	{
@@ -379,11 +379,11 @@ double min_d_range_cf(const TrajectoryInformation& traj, const Car& car, const v
 	return (max_d - min_d) / (max_s - min_s);
 }
 
-double exceeds_a_y(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
+double exceeds_a_y_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other)
 {
 	for (auto a_i : traj.a_y)
 	{
-		if (a_i > 0.99 * MAX_ACCELERATION)
+		if (fabs(a_i) > 0.95 * MAX_ACCELERATION)
 		{
 			return 1.0;
 		}

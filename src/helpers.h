@@ -73,13 +73,9 @@ double eval_polynomial(const Eigen::VectorXd& coeffs, double x);
 
 Eigen::VectorXd JMT(vector< double> start, vector <double> end, double T);
 
-Eigen::VectorXd JMT_ConstantAcceleration(vector< double> start, vector <double> end, double T);
+Eigen::VectorXd PolyTrajectoryConstantAcceleration(vector< double> start, vector <double> end, double T);
 
-Eigen::VectorXd JMT_KeepVelocity(vector< double> start, vector <double> end, double T);
-
-Eigen::VectorXd JMT_PosVelConditions(vector<double> start, vector<double> end, double T);
-
-Eigen::VectorXd JMT_Approximation(vector<double> start, vector<double> end, double T);
+Eigen::VectorXd PolyTrajectoryPosVelConditions(vector<double> start, vector<double> end, double T);
 
 pair<double, double> compute_global_coords(double yaw, double x_offset, double y_offset, double x_local, double y_local);
 

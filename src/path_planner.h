@@ -5,7 +5,6 @@
 #include <functional>
 #include <string>
 #include <iostream>
-#include "spline.h"
 #include "helpers.h"
 
 
@@ -56,9 +55,9 @@ struct Car
 	double a = 0.0;
 	double yaw_dot = 0.0;
 	double x_local_dot = 0.0;
-	double x_local_dot_dot = 0.0;
+//	double x_local_dot_dot = 0.0;
 	double y_local_dot = 0.0;
-	double y_local_dot_dot = 0.0;
+//	double y_local_dot_dot = 0.0;
 };
 
 ostream& operator<<(ostream& os, const Car& car);
@@ -81,7 +80,7 @@ private:
 
 	double compute_cost(const Trajectory& trajectory, const Car& initial_state, const vector<Vehicle>& others, bool verbose = false);
 
-	pair<Eigen::VectorXd, Eigen::VectorXd> compute_jmt(Car& car_state, double d_goal, double acceleration);
+	pair<Eigen::VectorXd, Eigen::VectorXd> compute_local_trajectory(Car& car_state, double d_goal, double acceleration);
 
 	void generate_trajectories(Trajectory current, Car car_state, Trajectory& best, double& best_value, const Car& initial_state, const vector<Vehicle>& others);
 
@@ -94,11 +93,6 @@ private:
 
 	double T = 1.5;
 	size_t _num_copied = 20;
-
-	static const int NUM_SPLINES_PER_SIDE = 20;
-	// factor of 2 due to lane change splines + small correction splines
-	static const int NUM_SPLINES = 2 * ( 2 * NUM_SPLINES_PER_SIDE + 1);
-	tk::spline _basic_splines[NUM_SPLINES];
 };
 
 #endif // PATH_PLANER_H

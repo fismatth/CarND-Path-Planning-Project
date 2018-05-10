@@ -20,17 +20,6 @@ using json = nlohmann::json;
 
 
 int main() {
-	Eigen::Vector2d v1(1.0, 0.0);
-	Eigen::Vector2d v2(0.5, 0.5);
-	Eigen::Vector2d v3(-0.5, 0.5);
-
-//	cout << "yaw(v1, v2) = " << yaw(v1, v2) << endl;
-//	cout << "yaw(v1, v3) = " << yaw(v1, v3) << endl;
-//	cout << "yaw(v2, v1) = " << yaw(v2, v1) << endl;
-//	cout << "yaw(v3, v1) = " << yaw(v3, v1) << endl;
-//	getchar();
-
-
   uWS::Hub h;
 
   // Load up map values for waypoint's x,y,s and d normalized normal vectors
@@ -42,8 +31,6 @@ int main() {
 
   // Waypoint map to read from
   string map_file_ = "../data/highway_map.csv";
-  // The max s value before wrapping around the track back to 0
-
 
   MapData map_data;
   ifstream in_map_(map_file_.c_str(), ifstream::in);
@@ -72,25 +59,23 @@ int main() {
 	path_planner.register_cost_function(speed_cf, 10.0);
 	path_planner.register_cost_function(keep_lane_cf, 1.0);
 	path_planner.register_cost_function(min_lane_changes_cf, 1.0);
-//	path_planner.register_cost_function(min_total_yaw_cf, 0.5);
-	path_planner.register_cost_function(collision_cf, 100.0);
+	path_planner.register_cost_function(collision_cf, 1000.0);
 	path_planner.register_cost_function(off_road_cf, 1.0);
+	path_planner.register_cost_function(exceeds_a_y_cf, 100.0);
+	path_planner.register_cost_function(other_veh_gap_cf, 1.0);
+	path_planner.register_cost_function(exceeds_max_speed_cf, 1.0);
 //	path_planner.register_cost_function(max_acceleration_cf, 1.0);
-	path_planner.register_cost_function(exceeds_a_y, 1000.0);
 
+//	path_planner.register_cost_function(min_total_yaw_cf, 0.5);
 //	path_planner.register_cost_function(efficiency_cf, 1.0);
-
 //	path_planner.register_cost_function(standing_cf, 1.0);
-	path_planner.register_cost_function(exceeds_max_speed, 1.0);
 //	path_planner.register_cost_function(total_acceleration_cf, 0.01);
 //	path_planner.register_cost_function(max_jerk_cf, 1.0);
 //	path_planner.register_cost_function(total_jerk_cf, 1.0);
-	path_planner.register_cost_function(other_veh_gap_cf, 1.0);
-//	path_planner.register_cost_function(right_direction_cf, 1000.0);
+//	path_planner.register_cost_function(right_direction_cf, 1.0);
 //	path_planner.register_cost_function(min_d_cf, 1.0);
 //	path_planner.register_cost_function(max_dist_from_center_cf, 1.0);
 //	path_planner.register_cost_function(min_d_range_cf, 0.1);
-
 //	path_planner.register_cost_function(free_trajectory_cf, 1.0);
 
   h.onMessage([&path_planner](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,

@@ -21,37 +21,6 @@ ostream& operator<<(ostream& os, const Trajectory& traj)
 PathPlanner::PathPlanner(const MapData& waypoints) :
 		_map_data(waypoints)
 {
-	int idx = 0;
-
-	for (int i = -NUM_SPLINES_PER_SIDE; i <= NUM_SPLINES_PER_SIDE; ++i, ++idx)
-	{
-		vector<double> s {0.0, 0.25, 0.5, 0.75, 1.0};
-		// at most change 2 lanes with one spline
-		double d_diff_total = i * 2.0 * LANE_WIDTH / NUM_SPLINES_PER_SIDE;
-		vector<double> d {0.0, 0.15 * d_diff_total, 0.5 * d_diff_total, 0.85 * d_diff_total, d_diff_total};
-//		_basic_splines[idx].set_boundary(tk::spline::first_deriv, 0.0, tk::spline::first_deriv, i * 0.05);
-		_basic_splines[idx].set_points(s, d);
-//		cout << "Set right derivative to " << i * 0.5 << endl;
-		cout << "Set points for idx = " << idx << ": " << endl;
-		cout << s << d << endl;
-	}
-
-	for (int i = -NUM_SPLINES_PER_SIDE; i <= NUM_SPLINES_PER_SIDE; ++i, ++idx)
-	{
-		vector<double> s {0.0, 0.25, 0.5, 0.75, 1.0};
-		double d_diff_total = i * 4.0 / NUM_SPLINES_PER_SIDE;
-		vector<double> d {0.0, 0.1 * d_diff_total, 0.25 * d_diff_total, 0.5 * d_diff_total, d_diff_total};
-		_basic_splines[idx].set_points(s, d);
-		cout << "Set points for idx = " << idx << ": " << endl;
-		cout << s << d << endl;
-	}
-//	double t = 0.0;
-//
-//	while (t < 1.5)
-//	{
-//		cout << "f(" << t << ") = " << _basic_splines[3](t) << endl;
-//		t += dt;
-//	}
 }
 
 
@@ -91,13 +60,6 @@ double PathPlanner::compute_cost(const Trajectory& trajectory, const Car& initia
 	differentiate(dt, traj_info.v_x, traj_info.a_x);
 	differentiate(dt, traj_info.y_local, traj_info.v_y);
 	differentiate(dt, traj_info.v_y, traj_info.a_y);
-//	cout << "Actual speed: "<< endl << traj_info.v;
-
-//	if (verbose)
-//	{
-//		cout << "Traj. s, d, v, a, jerk" << endl;
-//		cout << traj_info.s_values << traj_info.d_values << traj_info.v << traj_info.a << traj_info.jerk << endl;
-//	}
 
 	double cost = 0.0;
 
@@ -113,29 +75,26 @@ double PathPlanner::compute_cost(const Trajectory& trajectory, const Car& initia
 
 	if (verbose)
 	{
-//		cout << traj_info.v << traj_info.a << traj_info.jerk << endl;
-//		cout << traj_info.d_values << endl;
 		cout << "Cost = " << cost << endl;
 	}
 
 	return cost;
 }
 
-pair<Eigen::VectorXd, Eigen::VectorXd> PathPlanner::compute_jmt(Car& car_state, double d_goal, double acceleration)
+pair<Eigen::VectorXd, Eigen::VectorXd> PathPlanner::compute_local_trajectory(Car& car_state, double d_goal, double acceleration)
 {
-	// s, d are actually local x, y coordinates
-	vector<double> start_x(3);
-	vector<double> end_x(3);
-	vector<double> start_y(3);
-	vector<double> end_y(3);
+	vector<double> start_x(2);
+	vector<double> end_x(2);
+	vector<double> start_y(2);
+	vector<double> end_y(2);
 
 	start_x[0] = 0.0;
 	start_x[1] = car_state.x_local_dot;
-	start_x[2] = car_state.x_local_dot_dot;
+//	start_x[2] = car_state.x_local_dot_dot;
 
 	start_y[0] = 0.0;
 	start_y[1] = car_state.y_local_dot;
-	start_y[2] = car_state.y_local_dot_dot;
+//	start_y[2] = car_state.y_local_dot_dot;
 
 	pair<double, double> xy_global_start = compute_global_coords(car_state.yaw, car_state.x, car_state.y, start_x[0], start_y[0]);
 	auto sd_start = getFrenet(xy_global_start.first, xy_global_start.second, car_state.yaw, _map_data.map_waypoints_x, _map_data.map_waypoints_y);
@@ -169,20 +128,14 @@ pair<Eigen::VectorXd, Eigen::VectorXd> PathPlanner::compute_jmt(Car& car_state, 
 
 	end_x[0] = xy_local_end.first;
 	end_x[1] = x_dot;
-	end_x[2] = x_dot_dot;
+//	end_x[2] = x_dot_dot;
 
 	end_y[0] = xy_local_end.second;
 	end_y[1] = y_dot;
-	end_y[2] = y_dot_dot;
+//	end_y[2] = y_dot_dot;
 
-//	cout << "Start/end x,y" << endl;
-//	cout << start_x << end_x << start_y << end_y << endl;
-
-	Eigen::VectorXd x_coeffs = JMT_ConstantAcceleration(start_x, end_x, T);
-	Eigen::VectorXd y_coeffs = JMT_PosVelConditions(start_y, end_y, T);
-
-//	double actual_x_dot = (eval_polynomial(x_coeffs, T) - eval_polynomial(x_coeffs, T - dt)) / dt;
-//	cout << "x_dot vs. actual x_dot: " << x_dot << " vs. " << actual_x_dot << endl;
+	Eigen::VectorXd x_coeffs = PolyTrajectoryConstantAcceleration(start_x, end_x, T);
+	Eigen::VectorXd y_coeffs = PolyTrajectoryPosVelConditions(start_y, end_y, T);
 
 	return make_pair(x_coeffs, y_coeffs);
 }
@@ -190,7 +143,7 @@ pair<Eigen::VectorXd, Eigen::VectorXd> PathPlanner::compute_jmt(Car& car_state, 
 void PathPlanner::generate_trajectories(Trajectory current, Car car_state, Trajectory& best, double& best_value, const Car& initial_state, const vector<Vehicle>& others)
 {
 	double y_diff_max = LANE_WIDTH;
-	int num_d_steps = 10;
+	int num_d_steps = 5;
 	double d_step = 0.025;
 
 	int best_lane = -1;
@@ -212,23 +165,7 @@ void PathPlanner::generate_trajectories(Trajectory current, Car car_state, Traje
 				Car new_car_state(car_state);
 
 				double t = dt;
-
-				double x_offset = car_state.x;
-				double y_offset = car_state.y;
-
-	//			if (current.x_values.size() > 0)
-	//			{
-	//				size_t last_idx = current.x_values.size() - 1;
-	//				double x_offset = current.x_values[last_idx];
-	//				double y_offset = current.y_values[last_idx];
-	//			}
-
-				double x_local = 0.0;
-				double y_local = 0.0;
-				double yaw  = car_state.yaw;
-
-				// limit acceleration depending on change in d direction
-				double acceleration = acc_factor * 1.5;//0.01 * max(0.0, (12.0 - fabs(new_car_state.d - d_goal))) / 12.0;
+				double acceleration = acc_factor * 1.5;
 
 				if (5.0 * fabs(d_goal - car_state.d) > (car_state.speed + 0.5 * acceleration) * T)
 				{
@@ -236,14 +173,16 @@ void PathPlanner::generate_trajectories(Trajectory current, Car car_state, Traje
 					continue;
 				}
 
-				pair<Eigen::VectorXd, Eigen::VectorXd> xy_coeffs = compute_jmt(new_car_state, d_goal, acceleration);
+				pair<Eigen::VectorXd, Eigen::VectorXd> xy_coeffs = compute_local_trajectory(new_car_state, d_goal, acceleration);
 
-				while (t <=  T )//(x_local <= x_max && )&& new_trajectory.x_values.size() < 70
+				while (t <=  T )
 				{
+					// compute local way point
 					double x_local = eval_polynomial(xy_coeffs.first, t);
 					double y_local = eval_polynomial(xy_coeffs.second, t);
 
-					pair<double, double> xy_global = compute_global_coords(yaw, x_offset, y_offset, x_local, y_local);
+					// transform to global coordinates
+					pair<double, double> xy_global = compute_global_coords(car_state.yaw, car_state.x, car_state.y, x_local, y_local);
 
 					// add waypoint to trajectory
 					new_trajectory.x_values.push_back(xy_global.first);
@@ -252,12 +191,11 @@ void PathPlanner::generate_trajectories(Trajectory current, Car car_state, Traje
 					t += dt;
 				}
 
-//				cout << "Planned speed: " << new_car_state.speed << endl;
-
 				double cost = compute_cost(new_trajectory, initial_state, others, false);
 
 				if (lane == _desired_lane)
 				{
+					// reduce cost if trajectory follows last plan (keep lane or change to specific lane)
 					cost *= 0.5;
 				}
 
@@ -283,8 +221,6 @@ void PathPlanner::generate_trajectories(Trajectory current, Car car_state, Traje
 Trajectory PathPlanner::plan(const Trajectory& previous, const Car& car,
 		const vector<Vehicle>& other)
 {
-//	cout << "Received: " << previous << endl;
-
 	int start_idx = -1;
 	double min_diff = numeric_limits<double>::infinity();
 
@@ -293,14 +229,12 @@ Trajectory PathPlanner::plan(const Trajectory& previous, const Car& car,
 	{
 		for (int i = 0; i < _current_trajectory.x_values.size(); ++i)
 		{
-			//if (fabs(previous.x_values[0] - _current_trajectory.x_values[i]) < 1e-8 && fabs(previous.y_values[0] - _current_trajectory.y_values[i]) < 1e-8)
 			double dist = distance(previous.x_values[0], previous.y_values[0], _current_trajectory.x_values[i], _current_trajectory.y_values[i]);
+
 			if (dist < min_diff)
 			{
 				start_idx = i;
 				min_diff = dist;
-
-				//break;
 			}
 		}
 	}
@@ -309,15 +243,7 @@ Trajectory PathPlanner::plan(const Trajectory& previous, const Car& car,
 	{
 		cout << "Could not find start idx" << endl;
 		start_idx = 0;
-//		char c;
-//		cin >> c;
 	}
-//	else
-//	{
-//		cout << "Found start idx " << start_idx << " with diff = " << min_diff << endl;
-//		cout << previous.x_values[0] << " vs. " << _current_trajectory.x_values[start_idx] << endl;
-//		cout << previous.y_values[0] << " vs. " << _current_trajectory.y_values[start_idx] << endl;
-//	}
 
 	Trajectory start_trajectory;
 
@@ -332,7 +258,7 @@ Trajectory PathPlanner::plan(const Trajectory& previous, const Car& car,
 	_current_trajectory.y_values.clear();
 
 	int last_idx = start_trajectory.x_values.size() - 1;
-	// estimated state of the car after following first 20 points from previous trajectory
+	// estimated state of the car after following first _num_copied points from previous trajectory
 	Car start_state(car);
 
 	if (start_trajectory.x_values.size() >= 1)
@@ -353,9 +279,6 @@ Trajectory PathPlanner::plan(const Trajectory& previous, const Car& car,
 		Eigen::Vector2d e_x(1.0, 0.0);
 		Eigen::Vector2d driving_direction(x_t - x_t_1, y_t - y_t_1);
 		start_state.yaw = yaw(e_x, driving_direction);
-
-//		cout << "current yaw = " << rad2deg(car.yaw) << "°" << endl;
-//		cout << "yaw after copied = " << rad2deg(start_state.yaw) << "°" << endl;
 
 		if (start_trajectory.x_values.size() >= 3)
 		{
@@ -379,16 +302,16 @@ Trajectory PathPlanner::plan(const Trajectory& previous, const Car& car,
 				y_local[i] = xy_local.second;
 			}
 
-			vector<double> x_local_dot, x_local_dot_dot, y_local_dot, y_local_dot_dot;
+			vector<double> x_local_dot, y_local_dot;//, y_local_dot_dot, x_local_dot_dot
 			differentiate(dt, x_local, x_local_dot);
-			differentiate(dt, x_local_dot, x_local_dot_dot);
+//			differentiate(dt, x_local_dot, x_local_dot_dot);
 			differentiate(dt, y_local, y_local_dot);
-			differentiate(dt, y_local_dot, y_local_dot_dot);
+//			differentiate(dt, y_local_dot, y_local_dot_dot);
 
 			start_state.x_local_dot = x_local_dot.back();
-			start_state.x_local_dot_dot = x_local_dot_dot.back();
+//			start_state.x_local_dot_dot = x_local_dot_dot.back();
 			start_state.y_local_dot = y_local_dot.back();
-			start_state.y_local_dot_dot = y_local_dot_dot.back();
+//			start_state.y_local_dot_dot = y_local_dot_dot.back();
 		}
 	}
 
@@ -397,12 +320,11 @@ Trajectory PathPlanner::plan(const Trajectory& previous, const Car& car,
 
 	generate_trajectories(start_trajectory, start_state, _current_trajectory, best_value, car, other);
 
+	// uncomment to see the values for each cost function for the chosen trajectory
 //	compute_cost(_current_trajectory, car, other, true);
 
 //	cout << "Send: " << _current_trajectory;
 //	cout << _current_trajectory.x_values.size() << endl;
-//	char c;
-//	cin >> c;
 
 	return _current_trajectory;
 }

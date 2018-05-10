@@ -315,38 +315,16 @@ Eigen::VectorXd JMT(vector< double> start, vector <double> end, double T)
     return result;
 }
 
-Eigen::VectorXd JMT_ConstantAcceleration(vector< double> start, vector <double> end, double T)
+Eigen::VectorXd PolyTrajectoryConstantAcceleration(vector< double> start, vector <double> end, double T)
 {
 	Eigen::VectorXd result(3);
 
-	result << start[0], start[1], (0.5 * (start[1] + end[1]) - start[1]) / T; //(end[0] - start[1] * T - start[0]) / (T * T)
+	result << start[0], start[1], (0.5 * (start[1] + end[1]) - start[1]) / T;
 
 	return result;
 }
 
-Eigen::VectorXd JMT_KeepVelocity(vector< double> start, vector <double> end, double T)
-{
-	  double s_i = start[0];
-	  double s1_i = start[1];
-	  double s2_i = start[2];
-	  double s1_f = end[1];
-	  double s2_f = end[2];
-
-	  double A1 = s1_f - (s1_i + s2_i*T);
-	  double A2 = s2_f-s2_i;
-
-	  Eigen::VectorXd coeffs(5);
-
-	  coeffs << s_i,
-			    s1_i,
-	            s2_i*0.5,
-	            (3.*A1 - A2*T)/(3.*T*T),
-	            (A2*T - 2.*A1)/(4.*T*T*T);
-
-	  return coeffs;
-}
-
-Eigen::VectorXd JMT_PosVelConditions(vector<double> start, vector<double> end, double T)
+Eigen::VectorXd PolyTrajectoryPosVelConditions(vector<double> start, vector<double> end, double T)
 {
 	double T_2 = T*T;
 	double T_3 = T_2 * T;
@@ -367,47 +345,6 @@ Eigen::VectorXd JMT_PosVelConditions(vector<double> start, vector<double> end, d
 		 end[0],
 		 end[1];
 
-	Eigen::VectorXd x = A.colPivHouseholderQr().solve(b);
-
-	return x;
-}
-
-
-Eigen::VectorXd JMT_Approximation(vector<double> start, vector<double> end, double T)
-{
-	double T_2 = T*T;
-	double T_3 = T_2 * T;
-	double T_4 = T_3 * T;
-	double T_5 = T_4 * T;
-	double T_half = 0.5 * T;
-	double T_half_2 = T_half * T_half;
-	double T_half_3 = T_half_2 * T_half;
-	double T_half_4 = T_half_3 * T_half;
-	Eigen::MatrixXd A(7, 6);
-
-	// conditions:
-	// s(0) = start[0] = s_0
-	// v(0) = start[1] = v_0
-	// a(0) = start[2] = a_0
-	// s(T) = end[0] = s_T
-	// v(T) = end[1] = v_T
-	// a(T) = end[2] = a_T
-	// v_avg = 1/T * integral_{0..T}v(t)dt = 1/T * (s(T) - s(0)) = 0.5 * (v_0 + v_T)
-	A << 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-		 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-		 0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
-		 1.0, T, T_2, T_3, T_4, T_5,
-		 0.0, 1.0, 2.0 * T, 3.0 * T_2, 4.0 * T_3, 5.0 * T_4,
-		 0.0, 0.0, 2.0, 3.0 * 2.0 * T, 4.0 * 3.0 * T_2, 5.0 * 4.0 * T_3,
-		 0.0, 1.0, T, T_2, T_3, T_4;
-	Eigen::VectorXd b(7);
-	b << start[0],
-		 start[1],
-		 start[2],
-		 end[0],
-		 end[1],
-		 end[2],
-		 0.5 * (start[1] + end[1]);
 	Eigen::VectorXd x = A.colPivHouseholderQr().solve(b);
 
 	return x;

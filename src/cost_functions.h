@@ -13,7 +13,7 @@ double speed_cf(const TrajectoryInformation&, const Car&, const vector<Vehicle>&
 
 double efficiency_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
 
-double exceeds_max_speed(const TrajectoryInformation&, const Car&, const vector<Vehicle>&);
+double exceeds_max_speed_cf(const TrajectoryInformation&, const Car&, const vector<Vehicle>&);
 
 double max_acceleration_cf(const TrajectoryInformation&, const Car&, const vector<Vehicle>&);
 
@@ -47,6 +47,6 @@ double good_goal_cf(const TrajectoryInformation& traj, const Car& car, const vec
 
 double min_d_range_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
 
-double exceeds_a_y(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
+double exceeds_a_y_cf(const TrajectoryInformation& traj, const Car& car, const vector<Vehicle>& other);
 
 #endif
